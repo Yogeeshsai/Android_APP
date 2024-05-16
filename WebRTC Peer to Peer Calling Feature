@@ -1,0 +1,109 @@
+Set up WebRTC dependencies:
+Add the necessary dependencies in your build.gradle file:
+
+groovy
+implementation 'org.webrtc:google-webrtc:1.0.+'
+Request necessary permissions:
+Ensure that your app has permissions to access the camera and microphone. Add the following permissions to your AndroidManifest.xml:
+
+xml
+
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+<uses-feature android:name="android.hardware.camera.any" />
+Initialize WebRTC:
+Set up the WebRTC PeerConnectionFactory in your activity:
+
+java
+
+private PeerConnectionFactory peerConnectionFactory;
+private EglBase rootEglBase;
+
+// Inside onCreate()
+rootEglBase = EglBase.create();
+PeerConnectionFactory.initialize(
+    PeerConnectionFactory.InitializationOptions.builder(this)
+        .setEnableVideoHwAcceleration(true)
+        .createInitializationOptions());
+peerConnectionFactory = PeerConnectionFactory.builder()
+    .setVideoDecoderFactory(new DefaultVideoDecoderFactory(rootEglBase.getEglBaseContext()))
+    .setVideoEncoderFactory(new DefaultVideoEncoderFactory(rootEglBase.getEglBaseContext(), true, true))
+    .createPeerConnectionFactory();
+Create and initialize PeerConnection:
+
+java
+
+private PeerConnection peerConnection;
+
+// Inside onCreate()
+List<PeerConnection.IceServer> iceServers = new ArrayList<>();
+iceServers.add(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer());
+PeerConnection.RTCConfiguration rtcConfig = new PeerConnection.RTCConfiguration(iceServers);
+peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, new CustomPeerConnectionObserver());
+Handle User Media:
+Request access to the camera and microphone and add them to the local MediaStream:
+
+java
+
+private MediaStream localStream;
+
+// Inside onCreate()
+getUserMedia();
+java
+
+private void getUserMedia() {
+    MediaConstraints audioConstraints = new MediaConstraints();
+    audioConstraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"));
+
+    MediaConstraints videoConstraints = new MediaConstraints();
+    videoConstraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"));
+
+    localStream = peerConnectionFactory.createLocalMediaStream("mediaStream");
+    MediaStreamTrack audioTrack = peerConnectionFactory.createAudioTrack("audioTrack", peerConnectionFactory.createAudioSource(audioConstraints));
+    localStream.addTrack(audioTrack);
+    MediaStreamTrack videoTrack = peerConnectionFactory.createVideoTrack("videoTrack", peerConnectionFactory.createVideoSource(false));
+    localStream.addTrack(videoTrack);
+
+    // Add localStream to peerConnection
+    peerConnection.addStream(localStream);
+}
+Signaling:
+Implement signaling for establishing connections between peers. This could involve using a signaling server or any other method like Firebase Cloud Messaging (FCM).
+
+Handle Remote Stream:
+Set up an observer to handle incoming remote streams:
+
+java
+
+private class CustomPeerConnectionObserver implements PeerConnection.Observer {
+    // Implement necessary methods
+}
+Initiate Call:
+To initiate a call, create an offer and set it as the local description:
+
+java
+
+private void createOffer() {
+    peerConnection.createOffer(new CustomSdpObserver(), new MediaConstraints());
+}
+Answer Call:
+To answer a call, create an answer and set it as the local description:
+
+java
+
+private void createAnswer() {
+    peerConnection.createAnswer(new CustomSdpObserver(), new MediaConstraints());
+}
+Handle SDP Offers and Answers:
+Implement methods to handle SDP offers and answers received from the signaling server and set them as remote descriptions.
+
+Establish Connection:
+Establish a connection between peers by exchanging ICE candidates.
+
+This is a high-level overview of the steps involved in implementing WebRTC for peer-to-peer video calling in an Android app. Each step requires further implementation and handling of various events and scenarios. For more detailed information and code samples, I recommend referring to the WebRTC documentation and tutorials available online.
+
+
+
+
+
+
